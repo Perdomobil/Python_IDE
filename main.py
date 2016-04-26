@@ -1,37 +1,50 @@
-import tempfile, subprocess, Tkinter
+import tempfile
+import subprocess
+import Tkinter
 
 
 class Python_IDE:
 	def __init__(self, obj):
-		self.compile_button = Tkinter.Button(obj, text = "Compile")
-		self.compile_button.bind("<Button-1>", self.Compile_Button_Handler)
-		self.compile_button.place(relx = 0.7, rely = 0.05, relwidth = 0.2, relheight = 0.1)
+		self.save_file_path = Tkinter.Text(obj, font = "Arial 12", wrap = Tkinter.WORD)
+                self.save_file_path.place(relx = 0.05, rely = 0.12, relwidth = 0.2, relheight = 0.075)
+                self.save_file_path.insert(Tkinter.END, "pri.py")
 
-		self.source_code = Tkinter.Text(obj, font = "Arial 14", wrap = Tkinter.WORD)
-		self.source_code.place(relx = 0.05, rely = 0.2, relwidth = 0.9, relheight = 0.49)
+		self.compile_button = Tkinter.Button(obj, text = "Compile", font = "Arial 12")
+		self.compile_button.bind("<Button-1>", self.compile_Button_Handler)
+		self.compile_button.place(relx = 0.75, rely = 0.12, relwidth = 0.2, relheight = 0.075)
 
-		self.result_message = Tkinter.Text(obj, font = "Arial 14", wrap = Tkinter.WORD)
-		self.result_message.place(relx = 0.05, rely = 0.7, relwidth = 0.9, relheight = 0.2)
+		self.code_text = Tkinter.Text(obj, font = "Arial 12", wrap = Tkinter.WORD)
+		self.code_text.place(relx = 0.05, rely = 0.2, relwidth = 0.9, relheight = 0.54)
+		"""scrollbar = Tkinter.Scrollbar(self.code_text)
+		scrollbar.pack(side = "right")
+		scrollbar["command"] = self.code_text.yview
+		self.code_text["yscrollcommand"] = scrollbar.set"""
 
+		self.output_text = Tkinter.Text(obj, font = "Arial 12", wrap = Tkinter.WORD)
+		self.output_text.place(relx = 0.05, rely = 0.75, relwidth = 0.9, relheight = 0.2)
 
-	def _source_to_file(self, path):
-		source_text = self.source_code.get(1.0, Tkinter.END)
+	def _code_to_file(self, path):
+		code_text = self.code_text.get(1.0, Tkinter.END)
 		with open(path, 'w') as f:
-			f.write(source_text)
+			f.write(code_text)
 
-
-	def Compile_Button_Handler(self, event):
+	def _compile_code(self):
 		python_path = "python2.7"
-		save_file_path = "pri.py"
+		with tempfile.NamedTemporaryFile("w") as tf:
+			self._code_to_file(tf.name)
+                        cmd  = "{} {}".format(python_path, tf.name)
+                        popen = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
+			return popen.communicate(), popen.returncode
 
-		self._source_to_file(save_file_path)
 
-		cmd  = "%s %s" % (python_path, save_file_path)
-		popen = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
-		stdoutdata, stderrdata = popen.communicate()
-		out_message = stderrdata if popen.returncode else stdoutdata
-		self.result_message.insert(Tkinter.END, out_message)
-
+	def compile_Button_Handler(self, event):
+		self.output_text.delete(1.0, Tkinter.END)
+		(stdoutdata, stderrdata), return_err_code = self._compile_code()
+		if return_err_code:
+			self.output_text.insert(Tkinter.END, stderrdata)
+		else:
+			self.output_text.insert(Tkinter.END, stdoutdata)
+                        self._code_to_file(self.save_file_path.get(1.0, Tkinter.END).replace("\n",""))
 
 def main():
 	root = Tkinter.Tk()
